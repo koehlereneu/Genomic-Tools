@@ -1,0 +1,95 @@
+---
+title: "Parse GFF/GTF"
+output: html_notebook
+author: "Emily Koehler"
+---
+
+
+
+- Using the `dplyr` library for tidy data wrangling and filtering GFF fields
+- Using `data.table` for fast reading of large GFF files using `fread()`
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Clear Workspace
+rm(list = ls())
+
+# Load libraries
+library(dplyr) 
+library(data.table)
+```
+
+
+
+Reads GFF file and filters it down to just the features and columns needed for analysis
+
+```{r}
+# CHANGE THIS DEPENDING ON CASE:  Path to GFF file working with
+gff_file <- "/Users/emilykoehler/Downloads/NCBI-1.Mmul_10.103.fixed.gff"
+
+# GFF files usually have 9 columns
+gff_data <- data.table::fread(gff_file, sep = "\t", header = FALSE,
+                  col.names = c("seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"))
+
+# CHANGE THIS DEPENDING ON CASE - Unwanted columns 
+gff_data <- gff_data %>%
+  select(! c(source, score, phase) ) 
+
+# CHANGE THIS DEPENDING ON CASE: Filter out feature types not interested in - Modify this list depending on the case
+gff_data <- gff_data %>%
+  filter(type != 'exon') %>%
+  filter(type != 'match') %>%
+  filter(type != 'CDS')
+
+# Quick check of the data
+print(nrow(gff_data))
+print(head(gff_data))
+```
+
+
+
+This parses useful fields like `gene`, `ID`, or `Parent` from the attributes column and adds them as new columns in the table, so it's easier to work with. 
+
+- Reference: [Bioconductor Support - getAttributeField function](https://support.bioconductor.org/p/24657/)
+
+```{r}
+# Helper function to extract a specific field (like "ID" or "gene") from the 'attributes' column in a GFF3 file
+getAttributeField <- function (x, field, attrsep = ";") {
+     s = strsplit(x, split = attrsep, fixed = TRUE)    #Split string into individual attributes
+     sapply(s, function(atts) {
+         a = strsplit(atts, split = "=", fixed = TRUE) # Split each attribute into key/value
+         m = match(field, sapply(a, "[", 1))     # Find the index where the field matches
+         if (!is.na(m)) {
+             rv = a[[m]][2]        # Return the matching value
+         }
+         else {
+             rv = as.character(NA)   # Return NA if field not found
+         }
+         return(rv)
+     })
+}
+
+# Extract useful metadata fields from the 'attributes' column
+# CHANGE DEPENDING ON CASE - Add or remove fields here depending on what's relevant
+gff_data$ID <- getAttributeField(gff_data$attributes, "ID")
+gff_data$gene <- getAttributeField(gff_data$attributes, "gene")
+gff_data$gene_name <- getAttributeField(gff_data$attributes, "Name")
+gff_data$gene_biotype <- getAttributeField(gff_data$attributes, "gene_biotype")
+gff_data$transcript_id <- getAttributeField(gff_data$attributes, "transcript_id")
+gff_data$description <- getAttributeField(gff_data$attributes, "description")
+gff_data$Parent <- getAttributeField(gff_data$attributes, "Parent")
+
+
+# Grouping variable - useful if grouping by gene or transcript later
+gff_data$GroupField <- dplyr::coalesce(gff_data$Parent, gff_data$gene_id)
+
+# Reorder columns
+gff_data <- gff_data %>% select(GroupField, start, gene, gene_biotype, gene_name, everything())
+
+# Preview data
+print(head(gff_data))
+```
+
+
+
