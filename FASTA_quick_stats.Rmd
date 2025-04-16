@@ -1,0 +1,140 @@
+---
+title: "FASTA Quick Stats"
+author: "Emily Koehler"
+output:
+  html_document:
+    df_print: paged
+---
+
+# FASTA Quick Stats
+
+
+This notebook contains a few quick code chunks to get a general overview of a FASTA file, such as:
+
+
+
+- Number of sequences (chromosomes, scaffolds, or contigs)
+- Sequence lengths
+- Total number of nucleotides
+- GC content per sequence
+- Number and percentage of ambiguous bases (`N`s)
+- A peek at sequence names to see if they're labeled as chromosomes or scaffolds
+
+
+
+
+Quick sanity check—this just confirms the file starts with a `>` header line (e.g., `>1`, `>chr1`) and is followed by base content (A, T, C, G, maybe some Ns).
+
+
+```{r, message = FALSE, warning = FALSE}
+# Load libraries
+library(BiocManager)
+library(Biostrings)
+
+# File path
+file_path <- ("/Users/emilykoehler/Downloads/128_Mmul_10.fasta")
+
+#Preview file
+readLines(file_path, n = 10)
+```
+
+
+
+
+Load FASTA into memory
+
+
+```{r}
+# Load the FASTA as DNAStringSet
+fasta <- readDNAStringSet(filepath = file_path)
+
+# Show basic info
+fasta
+```
+
+
+
+Basic Sequence Stats
+
+
+```{r}
+# Number of sequences
+num_seqs <- length(fasta)
+
+# Sequence lengths
+seq_lengths <- width(fasta)
+
+# Total genome length
+total_length <- sum(seq_lengths)
+
+# Preview
+cat("Number of sequences:", num_seqs, "\n")
+cat("Total length (bp):", total_length, "\n")
+```
+
+
+
+
+GC Content per sequence
+
+
+```{r}
+# GC content per sequence
+gc_content <- letterFrequency(fasta, letters = c("G", "C"), as.prob = TRUE)
+gc_percent <- rowSums(gc_content) * 100
+
+# Optional: round it
+gc_percent <- round(gc_percent, 2)
+
+# Add to summary table
+summary_df <- data.frame(
+  Sequence_ID = names(fasta),
+  Length = seq_lengths,
+  GC_Content_Percent = gc_percent,
+  stringsAsFactors = FALSE
+)
+
+head(summary_df)
+```
+
+
+
+
+Ambiguous Bases (N Content)
+
+```{r}
+# Count N bases per sequence (ambiguous bases)
+n_counts <- letterFrequency(fasta, letters = "N", as.prob = FALSE)
+total_Ns <- sum(n_counts)
+percent_N <- round(100 * total_Ns / total_length, 2)
+
+cat("Total ambiguous (N) bases:", total_Ns, "\n")
+cat("Percent of genome that is ambiguous (N):", percent_N, "%\n")
+```
+
+
+Sequence Name Overview
+
+```{r}
+# Preview just the first and last few sequence names
+cat("First few sequence names:\n")
+print(head(names(fasta), 5))
+
+cat("\nLast few sequence names:\n")
+print(tail(names(fasta), 5))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
