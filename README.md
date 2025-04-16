@@ -7,6 +7,5 @@ Helpful bioinformatics/genomics tools for future me to use (and maybe someone el
 
 
 - **FASTA_Quick_Stats**
-  
-R Notebook to quickly summarize the contents of a FASTA file — number of sequences, total genome length, GC content, and proportion of ambiguous bases (N's).
+  R Notebook to quickly summarize the contents of a FASTA file — number of sequences, total genome length, GC content, and proportion of ambiguous bases (N's).
  
